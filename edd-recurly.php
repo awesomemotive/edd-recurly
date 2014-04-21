@@ -3,7 +3,7 @@
 Plugin Name: Easy Digital Downloads - Recur.ly Checkout
 Plugin URL: http://easydigitaldownloads.com/extension/recurly
 Description: Adds a payment gateway/checkout for http://recur.ly
-Version: 1.0.1
+Version: 1.0.2
 Author: Pippin Williamson
 Author URI: http://pippinsplugins.com
 Contributors: mordauk
@@ -11,6 +11,10 @@ Contributors: mordauk
 
 if ( !defined( 'EDDR_PLUGIN_DIR' ) ) {
 	define( 'EDDR_PLUGIN_DIR', dirname( __FILE__ ) );
+}
+
+if( class_exists( 'EDD_License' ) && is_admin() ) {
+	$edd_recurly_license = new EDD_License( __FILE__, 'Recurly Checkout', EDD_STRIPE_VERSION, 'Pippin Williamson', 'stripe_license_key' );
 }
 
 // registers the gateway
