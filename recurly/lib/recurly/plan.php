@@ -6,6 +6,7 @@ class Recurly_Plan extends Recurly_Resource
   protected static $_nestedAttributes;
 
   function __construct() {
+    parent::__construct();
     $this->setup_fee_in_cents = new Recurly_CurrencyList('setup_fee_in_cents');
     $this->unit_amount_in_cents = new Recurly_CurrencyList('unit_amount_in_cents');
   }
@@ -31,18 +32,18 @@ class Recurly_Plan extends Recurly_Resource
 
   public function create() {
     $this->_save(Recurly_Client::POST, Recurly_Client::PATH_PLANS);
-  }  
+  }
   public function update() {
     $this->_save(Recurly_Client::PUT, $this->uri());
   }
 
   public function delete() {
-    return Recurly_Resource::_delete($this->uri());
+    return Recurly_Base::_delete($this->uri(), $this->_client);
   }
-  public static function deletePlan($planCode) {
-    return Recurly_Resource::_delete(Recurly_Plan::uriForPlan($planCode));
+  public static function deletePlan($planCode, $client = null) {
+    return Recurly_Base::_delete(Recurly_Plan::uriForPlan($planCode), $client);
   }
-  
+
   protected function uri() {
     if (!empty($this->_href))
       return $this->getHref();
@@ -58,6 +59,9 @@ class Recurly_Plan extends Recurly_Resource
   }
   protected function getWriteableAttributes() {
     return Recurly_Plan::$_writeableAttributes;
+  }
+  protected function getRequiredAttributes() {
+    return array();
   }
 }
 

@@ -8,6 +8,7 @@ abstract class Recurly_Resource extends Recurly_Base
 
   abstract protected function getNodeName();
   abstract protected function getWriteableAttributes();
+  abstract protected function getRequiredAttributes();
 
   public function __construct($href = null, $client = null)
   {
@@ -59,23 +60,11 @@ abstract class Recurly_Resource extends Recurly_Base
       $this->_client = new Recurly_Client();
 
     $response = $this->_client->request($method, $uri, $this->xml());
-    Recurly_Resource::__parseXmlToUpdateObject($response->body);
+    $response->assertValidResponse();
+    if (isset($response->body)) {
+      Recurly_Resource::__parseXmlToUpdateObject($response->body);
+    }
     $response->assertSuccessResponse($this);
-  }
-
-  /**
-   * Delete the object at the given URI.
-   * @param string URI of the object to delete
-   * @param array Additional parameters for the delete
-   */
-  protected function _delete($uri, $params = null)
-  {
-    if (is_null($this->_client))
-      $this->_client = new Recurly_Client();
-
-    $response = $this->_client->request(Recurly_Client::DELETE, $uri);
-    $response->assertSuccessResponse($this);
-    return true;
   }
 
 
@@ -84,32 +73,32 @@ abstract class Recurly_Resource extends Recurly_Base
     $doc = new DOMDocument("1.0");
     $root = $doc->appendChild($doc->createElement($this->getNodeName()));
     $this->populateXmlDoc($doc, $root, $this);
-    return $doc->saveXML();
+    // To be able to consistently run tests across different XML libraries,
+    // favor `<foo></foo>` over `<foo/>`.
+    return $doc->saveXML(null, LIBXML_NOEMPTYTAG);
   }
 
-  protected function populateXmlDoc(&$doc, &$node, &$obj)
+  protected function populateXmlDoc(&$doc, &$node, &$obj, $nested = false)
   {
-    $attributes = $obj->getChangedAttributes();
+    $attributes = $obj->getChangedAttributes($nested);
 
     foreach ($attributes as $key => $val) {
       if ($val instanceof Recurly_CurrencyList) {
         $val->populateXmlDoc($doc, $node);
       } else if ($val instanceof Recurly_Resource) {
         $attribute_node = $node->appendChild($doc->createElement($key));
-        $this->populateXmlDoc($doc, $attribute_node, $val);
+        $this->populateXmlDoc($doc, $attribute_node, $val, true);
       } else if (is_array($val)) {
-        if (empty($val))
-          continue;
-      	$attribute_node = $node->appendChild($doc->createElement($key));
+        $attribute_node = $node->appendChild($doc->createElement($key));
         foreach ($val as $child => $childValue) {
           if (is_null($child) || is_null($childValue)) {
             continue;
           }
-          elseif (is_string($child) && !is_null($childValue)) {
+          elseif (is_string($child)) {
             // e.g. "<discount_in_cents><USD>1000</USD></discount_in_cents>"
             $attribute_node->appendChild($doc->createElement($child, $childValue));
           }
-          elseif (is_int($child) && !is_null($childValue)) {
+          elseif (is_int($child)) {
             if (is_object($childValue)) {
               // e.g. "<subscription_add_ons><subscription_add_on>...</subscription_add_on></subscription_add_ons>"
               $childValue->populateXmlDoc($doc, $attribute_node, $childValue);
@@ -119,7 +108,13 @@ abstract class Recurly_Resource extends Recurly_Base
               $attribute_node->appendChild($doc->createElement(substr($key, 0, -1), $childValue));
             }
           }
-      	}
+        }
+      } else if (is_null($val)) {
+        $domAttribute = $doc->createAttribute('nil');
+        $domAttribute->value = 'nil';
+        $attribute_node = $doc->createElement($key, null);
+        $attribute_node->appendChild($domAttribute);
+        $node->appendChild($attribute_node);
       } else {
         if ($val instanceof DateTime) {
           $val = $val->format('c');
@@ -131,14 +126,30 @@ abstract class Recurly_Resource extends Recurly_Base
     }
   }
 
-  protected function getChangedAttributes()
+  protected function getChangedAttributes($nested = false)
   {
     $attributes = array();
-    foreach($this->getWriteableAttributes() as $attr) {
-      if (isset($this->_unsavedKeys[$attr]) || (isset($this->_values[$attr]) && is_array($this->_values[$attr]))) {
+    $writableAttributes = $this->getWriteableAttributes();
+    $requiredAttributes = $this->getRequiredAttributes();
+
+    foreach($writableAttributes as $attr) {
+      if(!array_key_exists($attr, $this->_values)) { continue; }
+
+      if(isset($this->_unsavedKeys[$attr]) ||
+         $nested && in_array($attr, $requiredAttributes) ||
+         (is_array($this->_values[$attr]) || $this->_values[$attr] instanceof ArrayAccess))
+      {
         $attributes[$attr] = $this->$attr;
       }
+
+      // Check for nested objects.
+      if ($this->_values[$attr] instanceof Recurly_Resource) {
+        if ($this->_values[$attr]->getChangedAttributes()) {
+          $attributes[$attr] = $this->$attr;
+        }
+      }
     }
+
     return $attributes;
   }
 

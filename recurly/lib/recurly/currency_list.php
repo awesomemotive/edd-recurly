@@ -1,48 +1,64 @@
 <?php
 
-class Recurly_CurrencyList implements ArrayAccess
+class Recurly_CurrencyList implements ArrayAccess, Countable, IteratorAggregate
 {
   private $currencies;
   private $nodeName;
-  
+
   function __construct($nodeName) {
     $this->nodeName = $nodeName;
     $this->currencies = array();
   }
 
   public function addCurrency($currencyCode, $amountInCents) {
-    $this->currencies[$currencyCode] = new Recurly_Currency($currencyCode, $amountInCents);
-  }
-  public function __set($k, $v) {
-    if (is_string($k) && strlen($k) == 3) {
-      $this->addCurrency($k, $v);
+    if (is_string($currencyCode) && strlen($currencyCode) == 3) {
+      $this->currencies[$currencyCode] = new Recurly_Currency($currencyCode, $amountInCents);
     }
+  }
+
+  public function getCurrency($currencyCode) {
+    return isset($this->currencies[$currencyCode]) ? $this->currencies[$currencyCode] : null;
   }
 
   public function offsetSet($offset, $value) {
-    if (is_null($offset)) {
-      $this->currencies[] = $value;
-    } else {
-      $this->currencies[$offset] = $value;
-    }
+    return $this->addCurrency($offset, $value);
   }
+
   public function offsetExists($offset) {
     return isset($this->currencies[$offset]);
   }
+
   public function offsetUnset($offset) {
     unset($this->currencies[$offset]);
   }
+
   public function offsetGet($offset) {
-    return isset($this->currencies[$offset]) ? $this->currencies[$offset] : null;
+    return $this->getCurrency($offset);
   }
 
+  public function __set($k, $v) {
+    return $this->offsetSet($k, $v);
+  }
 
-  public function populateXmlDoc(&$doc, &$node)
-  {
-    $currencyNode = $node->appendChild($doc->createElement($this->nodeName));
+  public function __get($k) {
+    return $this->offsetGet($k);
+  }
 
-    foreach($this->currencies as $currency) {
-      $currencyNode->appendChild($doc->createElement($currency->currencyCode, $currency->amount_in_cents));
+  public function count() {
+    return count($this->currencies);
+  }
+
+  public function getIterator() {
+    return new ArrayIterator($this->currencies);
+  }
+
+  public function populateXmlDoc(&$doc, &$node) {
+    // Don't emit an element if there are no currencies.
+    if ($this->currencies) {
+      $currencyNode = $node->appendChild($doc->createElement($this->nodeName));
+      foreach($this->currencies as $currency) {
+        $currencyNode->appendChild($doc->createElement($currency->currencyCode, $currency->amount_in_cents));
+      }
     }
   }
 

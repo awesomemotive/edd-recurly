@@ -3,7 +3,7 @@
 Plugin Name: Easy Digital Downloads - Recur.ly Checkout
 Plugin URL: http://easydigitaldownloads.com/extension/recurly
 Description: Adds a payment gateway/checkout for http://recur.ly
-Version: 1.1
+Version: 1.2
 Author: Pippin Williamson
 Author URI: http://pippinsplugins.com
 Contributors: mordauk
@@ -14,7 +14,7 @@ if ( !defined( 'EDDR_PLUGIN_DIR' ) ) {
 }
 
 if( class_exists( 'EDD_License' ) && is_admin() ) {
-	$edd_recurly_license = new EDD_License( __FILE__, 'Recurly Checkout', '1.1', 'Pippin Williamson' );
+	$edd_recurly_license = new EDD_License( __FILE__, 'Recurly Checkout', '1.2', 'Pippin Williamson' );
 }
 
 // registers the gateway
@@ -64,6 +64,7 @@ function eddr_process_recurly_payment( $purchase_data ) {
 	if ( ! $errors ) {
 
 		try {
+
 			Recurly_Client::$apiKey = $api_key;
 
 			$transaction = new Recurly_Transaction();
@@ -77,14 +78,20 @@ function eddr_process_recurly_payment( $purchase_data ) {
 			$billing_info = new Recurly_BillingInfo();
 			$billing_info->first_name = $purchase_data['user_info']['first_name'];
 			$billing_info->last_name = $purchase_data['user_info']['last_name'];
-			$billing_info->number = $purchase_data['post_data']['card_number'];
-			$billing_info->verification_value = $purchase_data['post_data']['card_cvc'];
-			$billing_info->month = $purchase_data['post_data']['card_exp_month'];
-			$billing_info->year = $purchase_data['post_data']['card_exp_year'];
+			$billing_info->number = $purchase_data['card_info']['card_number'];
+			$billing_info->verification_value = $purchase_data['card_info']['card_cvc'];
+			$billing_info->month = $purchase_data['card_info']['card_exp_month'];
+			$billing_info->year = $purchase_data['card_info']['card_exp_year'];
+			$billing_info->address1 = $purchase_data['card_info']['card_address'];
+			$billing_info->address2 = $purchase_data['card_info']['card_address_2'];
+			$billing_info->city = $purchase_data['card_info']['card_city'];
+			$billing_info->state = $purchase_data['card_info']['card_state'];
+			$billing_info->zip = $purchase_data['card_info']['card_zip'];
+			$billing_info->country = $purchase_data['card_info']['card_country'];
+			$billing_info->ip_address = edd_get_ip();
 
 			$account->billing_info = $billing_info;
 			$transaction->account = $account;
-
 
 			$transaction->create();
 
@@ -114,6 +121,7 @@ function eddr_process_recurly_payment( $purchase_data ) {
 			}
 
 		} catch ( Exception $e ) {
+
 			// if errors are present, send the user back to the purchase page so they can be corrected
 			edd_set_error( 'some_error', __( 'An error occurred, please try again.', 'eddr' ) );
 		}

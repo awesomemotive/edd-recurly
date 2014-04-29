@@ -4,21 +4,28 @@ class Recurly_Account extends Recurly_Resource
 {
   protected static $_writeableAttributes;
   protected static $_nestedAttributes;
+  protected static $_requiredAttributes;
 
   function __construct($accountCode = null) {
+    parent::__construct();
     if (!is_null($accountCode))
       $this->account_code = $accountCode;
+    $this->address = new Recurly_Address();
   }
 
   public static function init()
   {
     Recurly_Account::$_writeableAttributes = array(
-      'account_code','username','first_name','last_name',
-      'email','company_name','accept_language','billing_info'
+      'account_code','username','first_name','last_name','vat_number',
+      'email','company_name','accept_language','billing_info','address'
     );
     Recurly_Account::$_nestedAttributes = array(
       'adjustments','billing_info','invoices','subscriptions','transactions'
     );
+    Recurly_Account::$_requiredAttributes = array(
+      'account_code'
+    );
+
   }
 
   public static function get($accountCode, $client = null) {
@@ -27,16 +34,24 @@ class Recurly_Account extends Recurly_Resource
 
   public function create() {
     $this->_save(Recurly_Client::POST, Recurly_Client::PATH_ACCOUNTS);
-  }  
+  }
   public function update() {
     $this->_save(Recurly_Client::PUT, $this->uri());
   }
 
   public function close() {
-    return Recurly_Resource::_delete($this->uri());
+    Recurly_Base::_delete($this->uri(), $this->_client);
+    $this->state = 'closed';
   }
-  public static function closeAccount($accountCode) {
-    return Recurly_Resource::_delete(Recurly_Account::uriForAccount($accountCode));
+  public static function closeAccount($accountCode, $client = null) {
+    return Recurly_Base::_delete(Recurly_Account::uriForAccount($accountCode), $client);
+  }
+
+  public function reopen() {
+    $this->_save(Recurly_Client::PUT, $this->uri() . '/reopen');
+  }
+  public static function reopenAccount($accountCode, $client = null) {
+    return Recurly_Base::_put(Recurly_Account::uriForAccount($accountCode) . '/reopen', $client);
   }
 
   protected function uri() {
@@ -54,6 +69,9 @@ class Recurly_Account extends Recurly_Resource
   }
   protected function getWriteableAttributes() {
     return Recurly_Account::$_writeableAttributes;
+  }
+  protected function getRequiredAttributes() {
+    return Recurly_Account::$_requiredAttributes;
   }
 }
 

@@ -9,22 +9,22 @@ class Recurly_Adjustment extends Recurly_Resource
   {
     Recurly_Adjustment::$_writeableAttributes = array(
       'currency','unit_amount_in_cents','quantity','description',
-      'taxable','accounting_code'
+      'accounting_code'
     );
     Recurly_Adjustment::$_nestedAttributes = array(
       'invoice'
     );
   }
 
-  public static function get($adjustment_uuid) {
-    return Recurly_Base::_get(Recurly_Client::PATH_ADJUSTMENTS . '/' . rawurlencode($adjustment_uuid));
+  public static function get($adjustment_uuid, $client = null) {
+    return Recurly_Base::_get(Recurly_Client::PATH_ADJUSTMENTS . '/' . rawurlencode($adjustment_uuid), $client);
   }
 
   public function create() {
     $this->_save(Recurly_Client::POST, $this->createUriForAccount());
   }
   public function delete() {
-    return Recurly_Resource::_delete($this->getHref());
+    return Recurly_Base::_delete($this->getHref(), $this->_client);
   }
 
   protected function createUriForAccount() {
@@ -40,6 +40,9 @@ class Recurly_Adjustment extends Recurly_Resource
   }
   protected function getWriteableAttributes() {
     return Recurly_Adjustment::$_writeableAttributes;
+  }
+  protected function getRequiredAttributes() {
+    return array();
   }
 }
 

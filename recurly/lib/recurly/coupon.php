@@ -7,6 +7,7 @@ class Recurly_Coupon extends Recurly_Resource
   protected $_redeemUrl;
 
   function __construct() {
+    parent::__construct();
     $this->discount_in_cents = new Recurly_CurrencyList('discount_in_cents');
   }
 
@@ -29,7 +30,11 @@ class Recurly_Coupon extends Recurly_Resource
   }
 
   public function redeemCoupon($accountCode, $currency) {
-    $redemption = new Recurly_CouponRedemption();
+    if ($this->state != 'redeemable') {
+      throw new Recurly_Error('Coupon is not redeemable.');
+    }
+
+    $redemption = new Recurly_CouponRedemption(null, $this->_client);
     $redemption->account_code = $accountCode;
     $redemption->currency = $currency;
 
@@ -41,12 +46,11 @@ class Recurly_Coupon extends Recurly_Resource
     }
   }
 
-
   public function delete() {
-    return Recurly_Resource::_delete($this->uri());
+    return Recurly_Base::_delete($this->uri(), $this->_client);
   }
-  public static function deleteCoupon($couponCode) {
-    return Recurly_Resource::_delete(Recurly_Coupon::uriForCoupon($couponCode));
+  public static function deleteCoupon($couponCode, $client = null) {
+    return Recurly_Base::_delete(Recurly_Coupon::uriForCoupon($couponCode), $client);
   }
 
   protected function uri() {
@@ -64,6 +68,9 @@ class Recurly_Coupon extends Recurly_Resource
   }
   protected function getWriteableAttributes() {
     return Recurly_Coupon::$_writeableAttributes;
+  }
+  protected function getRequiredAttributes() {
+    return array();
   }
 }
 

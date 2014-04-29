@@ -17,7 +17,7 @@ class Recurly_CouponRedemption extends Recurly_Resource
   }
 
   public function delete($accountCode = null) {
-    return Recurly_Resource::_delete($this->uri($accountCode));
+    return Recurly_Base::_delete($this->uri($accountCode), $this->_client);
   }
   public static function deleteCouponRedemption($accountCode) {
     return Recurly_CouponRedemption::uriForAccount($accountCode);
@@ -28,8 +28,8 @@ class Recurly_CouponRedemption extends Recurly_Resource
       return $this->getHref();
     else if(!empty($accountCode))
       return Recurly_CouponRedemption::uriForAccount($accountCode);
-		else
-			return false;
+    else
+      return false;
   }
   protected static function uriForAccount($accountCode) {
     return Recurly_Client::PATH_ACCOUNTS . '/' . rawurlencode($accountCode) . Recurly_Client::PATH_COUPON_REDEMPTION;
@@ -40,6 +40,9 @@ class Recurly_CouponRedemption extends Recurly_Resource
   }
   protected function getWriteableAttributes() {
     return Recurly_CouponRedemption::$_writeableAttributes;
+  }
+  protected function getRequiredAttributes() {
+    return array();
   }
 }
 

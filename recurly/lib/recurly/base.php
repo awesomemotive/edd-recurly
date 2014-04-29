@@ -21,7 +21,6 @@ abstract class Recurly_Base
   }
 
 
-
   /**
    * Request the URI, validate the response and return the object.
    * @param string Resource URI, if not fully qualified, the base URL will be appended
@@ -51,6 +50,42 @@ abstract class Recurly_Base
     $object = Recurly_Base::__parseXmlToNewObject($response->body, $client);
     $response->assertSuccessResponse($object);
     return $object;
+  }
+
+  /**
+   * Put to the URI, validate the response and return the object.
+   * @param string Resource URI, if not fully qualified, the base URL will be appended
+   * @param string Optional client for the request, useful for mocking the client
+   */
+  protected static function _put($uri, $client = null)
+  {
+    if (is_null($client))
+      $client = new Recurly_Client();
+    $response = $client->request(Recurly_Client::PUT, $uri);
+    $response->assertValidResponse();
+    if ($response->body) {
+      $object = Recurly_Base::__parseXmlToNewObject($response->body, $client);
+    }
+    $response->assertSuccessResponse($object);
+    return $object;
+  }
+
+  /**
+   * Delete the URI, validate the response and return the object.
+   * @param string Resource URI, if not fully qualified, the base URL will be appended
+   * @param string Data to post to the URI
+   * @param string Optional client for the request, useful for mocking the client
+   */
+  protected static function _delete($uri, $client = null)
+  {
+    if (is_null($client))
+      $client = new Recurly_Client();
+    $response = $client->request(Recurly_Client::DELETE, $uri);
+    $response->assertValidResponse();
+    if ($response->body) {
+      return Recurly_Base::__parseXmlToNewObject($response->body, $client);
+    }
+    return null;
   }
 
   /**
@@ -112,8 +147,9 @@ abstract class Recurly_Base
   static $class_map = array(
     'account' => 'Recurly_Account',
     'accounts' => 'Recurly_AccountList',
-    'add_on' => 'Recurly_AddOn',
-    'add_ons' => 'Recurly_AddOnList',
+    'address' => 'Recurly_Address',
+    'add_on' => 'Recurly_Addon',
+    'add_ons' => 'Recurly_AddonList',
     'billing_info' => 'Recurly_BillingInfo',
     'adjustment' => 'Recurly_Adjustment',
     'adjustments' => 'Recurly_AdjustmentList',
@@ -126,6 +162,8 @@ abstract class Recurly_Base
     'invoice' => 'Recurly_Invoice',
     'invoices' => 'Recurly_InvoiceList',
     'line_items' => 'array',
+    'note' => 'Recurly_Note',
+    'notes' => 'Recurly_NoteList',
     'plan' => 'Recurly_Plan',
     'plans' => 'Recurly_PlanList',
     'plan_code' => 'string',
@@ -140,12 +178,12 @@ abstract class Recurly_Base
     'transaction' => 'Recurly_Transaction',
     'transactions' => 'Recurly_TransactionList',
     'transaction_error' => 'Recurly_TransactionError',
-    'unit_amount_in_cents' => 'Recurly_CurrencyList'
+    'unit_amount_in_cents' => 'Recurly_CurrencyList',
   );
 
   protected static function __parseXmlToNewObject($xml, $client=null) {
-		$dom = new DOMDocument();
-    if (!$dom->loadXML($xml)) return null;
+    $dom = new DOMDocument();
+    if (empty($xml) || !$dom->loadXML($xml, LIBXML_NOBLANKS)) return null;
 
     $rootNode = $dom->documentElement;
 
@@ -158,8 +196,8 @@ abstract class Recurly_Base
 
   protected function __parseXmlToUpdateObject($xml)
   {
-		$dom = new DOMDocument();
-		if (!$dom->loadXML($xml)) return null;
+    $dom = new DOMDocument();
+    if (empty($xml) || !$dom->loadXML($xml, LIBXML_NOBLANKS)) return null;
 
     $rootNode = $dom->documentElement;
 
@@ -218,28 +256,31 @@ abstract class Recurly_Base
           continue;
         }
 
-        if ($node->childNodes->length > 1) {
-          $new_obj = Recurly_Resource::__createNodeObject($node);
-          if (!is_null($new_obj))
-            $object->$nodeName = Recurly_Resource::__parseXmlToObject($node->firstChild, $new_obj);
-        } else if ($node->childNodes->length == 0) {
-          // No children
+        $numChildren = $node->childNodes->length;
+        if ($numChildren == 0) {
+          // No children, we might have a link
           $href = $node->getAttribute('href');
           if (!empty($href)) {
             if ($nodeName == 'a') {
               $linkName = $node->getAttribute('name');
               $method = $node->getAttribute('method');
               $object->addLink($linkName, $href, $method);
-            }
-            else {
+            } else {
               if (!is_object($object))
                 $object->$nodeName = new Recurly_Stub($nodeName, $href);
               else
                 $object->$nodeName = new Recurly_Stub($nodeName, $href, $object->_client);
             }
           }
+
+        } else if ($node->firstChild->nodeType == XML_ELEMENT_NODE) {
+          // has element children, drop in and continue parsing
+          $new_obj = Recurly_Resource::__createNodeObject($node);
+          if (!is_null($new_obj))
+            $object->$nodeName = Recurly_Resource::__parseXmlToObject($node->firstChild, $new_obj);
+
         } else {
-          // Single element
+          // we have a single text child
           if ($node->hasAttribute('nil')) {
             $object->$nodeName = null;
           } else {
@@ -303,14 +344,17 @@ abstract class Recurly_Base
     else if ($node_class == 'string')
       return $node->firstChild->wholeText;
     else {
-      if ($node_class == 'Recurly_CurrencyList')
+      if ($node_class == 'Recurly_CurrencyList') {
         $new_obj = new $node_class($nodeName);
-      else
+      } else
         $new_obj = new $node_class();
 
       $href = $node->getAttribute('href');
       if (!empty($href))
         $new_obj->setHref($href);
+      else if ($new_obj instanceof Recurly_Pager) {
+        $new_obj->_count = $node->childNodes->length;
+      }
 
       return $new_obj;
     }
