@@ -26,26 +26,30 @@ add_filter( 'edd_payment_gateways', 'eddr_register_gateway' );
 
 function eddr_checkout_error_checks( $valid_data, $post_data ) {
 
-	$api_key = edd_get_option( 'recurly_api_key' );
+	if ( edd_get_cart_total() > 0 ) {
 
-	if ( empty( $api_key ) ) {
-		edd_set_error( 'missing_api_key', __( 'Please enter your Recurly API key in Settings', 'eddr' ) );
+		$api_key = edd_get_option( 'recurly_api_key' );
+
+		if ( empty( $api_key ) ) {
+			edd_set_error( 'missing_api_key', __( 'Please enter your Recurly API key in Settings', 'eddr' ) );
+		}
+
+		if ( ! isset( $_POST['card_name'] ) || strlen( trim( $_POST['card_name'] ) ) == 0 )
+			edd_set_error( 'no_card_name', __( 'Please enter a name for the credit card.', 'eddr' ) );
+
+		if ( ! isset( $_POST['card_number'] ) || strlen( trim( $_POST['card_number'] ) ) == 0 )
+			edd_set_error( 'no_card_number', __( 'Please enter a credit card number.', 'eddr' ) );
+
+		if ( ! isset( $_POST['card_cvc'] ) || strlen( trim( $_POST['card_cvc'] ) ) == 0 )
+			edd_set_error( 'no_card_cvc', __( 'Please enter a CVC/CVV for the credit card.', 'eddr' ) );
+
+		if ( ! isset( $_POST['card_exp_month'] ) || strlen( trim( $_POST['card_exp_month'] ) ) == 0 )
+			edd_set_error( 'no_card_exp_month', __( 'Please enter a expiration month.', 'eddr' ) );
+
+		if ( ! isset( $_POST['card_exp_year'] ) || strlen( trim( $_POST['card_exp_year'] ) ) == 0 )
+			edd_set_error( 'no_card_exp_year', __( 'Please enter a expiration year.', 'eddr' ) );
+
 	}
-
-	if ( ! isset( $_POST['card_name'] ) || strlen( trim( $_POST['card_name'] ) ) == 0 )
-		edd_set_error( 'no_card_name', __( 'Please enter a name for the credit card.', 'eddr' ) );
-
-	if ( ! isset( $_POST['card_number'] ) || strlen( trim( $_POST['card_number'] ) ) == 0 )
-		edd_set_error( 'no_card_number', __( 'Please enter a credit card number.', 'eddr' ) );
-
-	if ( ! isset( $_POST['card_cvc'] ) || strlen( trim( $_POST['card_cvc'] ) ) == 0 )
-		edd_set_error( 'no_card_cvc', __( 'Please enter a CVC/CVV for the credit card.', 'eddr' ) );
-
-	if ( ! isset( $_POST['card_exp_month'] ) || strlen( trim( $_POST['card_exp_month'] ) ) == 0 )
-		edd_set_error( 'no_card_exp_month', __( 'Please enter a expiration month.', 'eddr' ) );
-
-	if ( ! isset( $_POST['card_exp_year'] ) || strlen( trim( $_POST['card_exp_year'] ) ) == 0 )
-		edd_set_error( 'no_card_exp_year', __( 'Please enter a expiration year.', 'eddr' ) );
 }
 add_action( 'edd_checkout_error_checks', 'eddr_checkout_error_checks', 10, 2 );
 
