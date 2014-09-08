@@ -116,9 +116,16 @@ function eddr_process_recurly_payment( $purchase_data ) {
 			$payment = edd_insert_payment( $payment );
 
 			if ( $payment ) {
+
 				edd_update_payment_status( $payment, 'publish' );
+
+				if( function_exists( 'edd_set_payment_transaction_id' ) ) {
+					edd_set_payment_transaction_id( $payment, $transaction->uuid );
+				}
+
 				edd_empty_cart();
 				edd_send_to_success_page();
+
 			} else {
 				// if errors are present, send the user back to the purchase page so they can be corrected
 				edd_send_back_to_checkout( '?payment-mode=' . $purchase_data['post_data']['edd-gateway'] );
