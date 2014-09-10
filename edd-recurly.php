@@ -26,7 +26,7 @@ add_filter( 'edd_payment_gateways', 'eddr_register_gateway' );
 
 function eddr_checkout_error_checks( $valid_data, $post_data ) {
 
-	if ( edd_get_cart_total() > 0 ) {
+	if ( edd_get_cart_total() > 0 && 'recurly' == $valid_data['gateway'] ) {
 
 		$api_key = edd_get_option( 'recurly_api_key' );
 
@@ -34,20 +34,25 @@ function eddr_checkout_error_checks( $valid_data, $post_data ) {
 			edd_set_error( 'missing_api_key', __( 'Please enter your Recurly API key in Settings', 'eddr' ) );
 		}
 
-		if ( ! isset( $_POST['card_name'] ) || strlen( trim( $_POST['card_name'] ) ) == 0 )
+		if ( ! isset( $_POST['card_name'] ) || strlen( trim( $_POST['card_name'] ) ) == 0 ) {
 			edd_set_error( 'no_card_name', __( 'Please enter a name for the credit card.', 'eddr' ) );
+		}
 
-		if ( ! isset( $_POST['card_number'] ) || strlen( trim( $_POST['card_number'] ) ) == 0 )
+		if ( ! isset( $_POST['card_number'] ) || strlen( trim( $_POST['card_number'] ) ) == 0 ) {
 			edd_set_error( 'no_card_number', __( 'Please enter a credit card number.', 'eddr' ) );
+		}
 
-		if ( ! isset( $_POST['card_cvc'] ) || strlen( trim( $_POST['card_cvc'] ) ) == 0 )
+		if ( ! isset( $_POST['card_cvc'] ) || strlen( trim( $_POST['card_cvc'] ) ) == 0 ) {
 			edd_set_error( 'no_card_cvc', __( 'Please enter a CVC/CVV for the credit card.', 'eddr' ) );
+		}
 
-		if ( ! isset( $_POST['card_exp_month'] ) || strlen( trim( $_POST['card_exp_month'] ) ) == 0 )
+		if ( ! isset( $_POST['card_exp_month'] ) || strlen( trim( $_POST['card_exp_month'] ) ) == 0 ) {
 			edd_set_error( 'no_card_exp_month', __( 'Please enter a expiration month.', 'eddr' ) );
+		}
 
-		if ( ! isset( $_POST['card_exp_year'] ) || strlen( trim( $_POST['card_exp_year'] ) ) == 0 )
+		if ( ! isset( $_POST['card_exp_year'] ) || strlen( trim( $_POST['card_exp_year'] ) ) == 0 ) {
 			edd_set_error( 'no_card_exp_year', __( 'Please enter a expiration year.', 'eddr' ) );
+		}
 
 	}
 }
@@ -134,7 +139,8 @@ function eddr_process_recurly_payment( $purchase_data ) {
 		} catch ( Exception $e ) {
 
 			// if errors are present, send the user back to the purchase page so they can be corrected
-			edd_set_error( 'some_error', __( 'An error occurred, please try again.', 'eddr' ) );
+			edd_set_error( 'some_error', sprintf( __( 'Error: %s', 'eddr' ), $e->getMessage() ) );
+			edd_send_back_to_checkout( '?payment-mode=' . $purchase_data['post_data']['edd-gateway'] );
 		}
 	} else {
 		edd_send_back_to_checkout( '?payment-mode=' . $purchase_data['post_data']['edd-gateway'] );
