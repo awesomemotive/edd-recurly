@@ -27,6 +27,8 @@ class Recurly_AccountTest extends Recurly_TestCase
     $this->assertEquals($account->address->country, 'US');
     $this->assertEquals($account->created_at->getTimestamp(), 1304164800);
     $this->assertEquals($account->getHref(),'https://api.recurly.com/v2/accounts/abcdef1234567890');
+    $this->assertTrue($account->tax_exempt);
+    $this->assertEquals($account->entity_use_code, 'I');
   }
 
   public function testCloseAccount() {
@@ -85,9 +87,11 @@ class Recurly_AccountTest extends Recurly_TestCase
     $account->account_code = 'act123';
     $account->first_name = 'Verena';
     $account->address->address1 = "123 Main St.";
+    $account->tax_exempt = false;
+    $account->entity_use_code = 'I';
 
     $this->assertEquals(
-      "<?xml version=\"1.0\"?>\n<account><account_code>act123</account_code><first_name>Verena</first_name><address><address1>123 Main St.</address1></address></account>\n",
+      "<?xml version=\"1.0\"?>\n<account><account_code>act123</account_code><first_name>Verena</first_name><address><address1>123 Main St.</address1></address><tax_exempt>false</tax_exempt><entity_use_code>I</entity_use_code></account>\n",
       $account->xml()
     );
   }
@@ -103,5 +107,29 @@ class Recurly_AccountTest extends Recurly_TestCase
       "<?xml version=\"1.0\"?>\n<account><address><address1>987 Alternate St.</address1></address></account>\n",
       $account->xml()
     );
+  }
+
+  public function testCreate() {
+    $this->client->addResponse('POST', '/accounts', 'accounts/create-201.xml');
+
+    $account = new Recurly_Account(null, $this->client);
+    $account->account_code = 'abcdef1234567890';
+
+    $account->create();
+
+    $this->assertInstanceOf('Recurly_Account', $account);
+  }
+
+  public function testCreateWithBillingInfoToken() {
+    $this->client->addResponse('POST', '/accounts', 'accounts/create-201.xml');
+
+    $account = new Recurly_Account(null, $this->client);
+    $account->account_code = 'abcdef1234567890';
+    $account->billing_info = new Recurly_BillingInfo();
+    $account->billing_info->token_id = 'abc123';
+
+    $account->create();
+
+    $this->assertInstanceOf('Recurly_Account', $account);
   }
 }

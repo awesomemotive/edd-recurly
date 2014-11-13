@@ -26,12 +26,12 @@ libcurl/7.19.5 OpenSSL/0.9.8g zlib/1.2.3.3 libidn/1.15
 
 If you're using [Composer](http://getcomposer.org/), you can simply add a
 dependency on `recurly/recurly-client` to your project's `composer.json` file.
-Here's an example of a dependency on 2.2:
+Here's an example of a dependency on 2.3:
 
 ```json
 {
     "require": {
-        "recurly/recurly-client": "2.2.*"
+        "recurly/recurly-client": "2.3.*"
     }
 }
 ```
@@ -62,12 +62,6 @@ Recurly_Client::$subdomain = 'your-subdomain';
 Recurly_Client::$apiKey = '012345678901234567890123456789ab';
 ```
 
-If you are using [Recurly.js](http://js.recurly.com), specify your `private_key`:
-
-```php
-Recurly_js::$privateKey = "0123456789abcdef0123456789abcdef";
-```
-
 ## API Documentation
 
 Please see the [Recurly API](http://docs.recurly.com/api) for more information.
@@ -81,3 +75,7 @@ Please see the [Recurly API](http://docs.recurly.com/api) for more information.
 
 - [@recurly](https://twitter.com/recurly)
 - [Google Group Announcements](https://groups.google.com/group/recurly-api)
+
+## Contributing Guidelines
+
+Please refer to [CONTRIBUTING.md](CONTRIBUTING.md)

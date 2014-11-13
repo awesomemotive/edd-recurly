@@ -10,13 +10,14 @@ class Recurly_Subscription extends Recurly_Resource
     Recurly_Subscription::$_writeableAttributes = array(
       'account','plan_code','coupon_code','unit_amount_in_cents','quantity',
       'currency','starts_at','trial_ends_at','total_billing_cycles', 'first_renewal_date',
-      'timeframe', 'subscription_add_ons', 'net_terms', 'po_number', 'collection_method'
+      'timeframe', 'subscription_add_ons', 'net_terms', 'po_number', 'collection_method',
+      'cost_in_cents', 'remaining_billing_cycles', 'bulk'
     );
     Recurly_Subscription::$_nestedAttributes = array('account', 'subscription_add_ons');
   }
 
-  public function __construct() {
-    parent::__construct();
+  public function __construct($href = null, $client = null) {
+    parent::__construct($href, $client);
     $this->subscription_add_ons = array();
   }
 
@@ -26,6 +27,14 @@ class Recurly_Subscription extends Recurly_Resource
 
   public function create() {
     $this->_save(Recurly_Client::POST, Recurly_Client::PATH_SUBSCRIPTIONS);
+  }
+
+  public function preview() {
+    if ($this->uuid) {
+      $this->_save(Recurly_Client::POST, $this->uri() . '/preview');
+    } else {
+      $this->_save(Recurly_Client::POST, Recurly_Client::PATH_SUBSCRIPTIONS . '/preview');
+    }
   }
 
   /**
@@ -81,8 +90,14 @@ class Recurly_Subscription extends Recurly_Resource
     $this->_save(Recurly_Client::PUT, $this->uri() . '/terminate?refund=' . $refundType);
   }
 
-  public function postpone($nextRenewalDate) {
-    $this->_save(Recurly_Client::PUT, $this->uri() . '/postpone?next_renewal_date=' . $nextRenewalDate);
+  /**
+   * Postpone a subscription's renewal date.
+   *
+   * $nextRenewalDate - ISO8601 DateTime String, postpone the subscription to this date
+   * $bulk - bool, for making bulk updates, avoid checking for duplicate subscriptions.
+   **/
+  public function postpone($nextRenewalDate, $bulk = false) {
+    $this->_save(Recurly_Client::PUT, $this->uri() . '/postpone?next_renewal_date=' . $nextRenewalDate . '&bulk=' . ((bool) $bulk));
   }
 
   protected function uri() {
